@@ -1,0 +1,26 @@
+level,subject,topic,year,paper,questionText,optionA,optionB,optionC,optionD,correctOption,explanation
+O-Level,Mathematics,Algebra,2018,Paper 1,Solve for x: 3x + 7 = 22,3,5,7,9,B,"3x = 22 - 7 = 15, so x = 15/3 = 5."
+O-Level,Mathematics,Geometry,2019,Paper 1,What is the sum of interior angles of a hexagon?,540 degrees,720 degrees,900 degrees,360 degrees,B,Sum of interior angles = (n-2) x 180 = (6-2) x 180 = 720 degrees.
+O-Level,Mathematics,Fractions,2020,Paper 1,Simplify 3/4 + 1/8,7/8,4/12,1/2,5/8,A,"3/4 = 6/8, so 6/8 + 1/8 = 7/8."
+O-Level,Mathematics,Statistics,2021,Paper 1,"Find the mean of 4, 8, 6, 10, 12",8,9,7,10,A,"Sum = 40, divided by 5 values = 8."
+O-Level,Mathematics,Indices,2022,Paper 1,Evaluate 2^3 x 2^2,16,32,64,8,B,2^3 x 2^2 = 2^(3+2) = 2^5 = 32.
+O-Level,Biology,Photosynthesis,2020,Paper 1,What gas do plants absorb during photosynthesis?,Oxygen,Carbon Dioxide,Nitrogen,Hydrogen,B,Plants absorb carbon dioxide from the air to make glucose during photosynthesis.
+O-Level,Biology,Cell Biology,2019,Paper 1,Which organelle is known as the powerhouse of the cell?,Nucleus,Ribosome,Mitochondrion,Golgi body,C,"Mitochondria produce ATP through respiration, supplying the cell's energy."
+O-Level,Biology,Human Reproduction,2021,Paper 1,Where does fertilisation normally occur in humans?,Uterus,Ovary,Fallopian tube,Vagina,C,The sperm meets the egg in the fallopian tube during fertilisation.
+O-Level,Biology,Nutrition,2018,Paper 1,Which vitamin deficiency causes scurvy?,Vitamin A,Vitamin C,Vitamin D,Vitamin K,B,Vitamin C deficiency leads to scurvy due to poor collagen formation.
+O-Level,Biology,Ecology,2022,Paper 1,What term describes organisms that make their own food?,Consumers,Decomposers,Producers,Predators,C,"Producers, mainly green plants, manufacture their own food via photosynthesis."
+O-Level,Chemistry,Acids and Bases,2020,Paper 1,What is the pH of a neutral solution at 25°C?,0,7,14,10,B,"A neutral solution has a pH of 7 at 25°C, being neither acidic nor basic."
+O-Level,Chemistry,Periodic Table,2019,Paper 1,Which group in the periodic table contains the noble gases?,Group 1,Group 7,Group 8/18,Group 2,C,"Noble gases are found in Group 18 (also called Group 8), and are largely unreactive."
+O-Level,Chemistry,Chemical Bonding,2021,Paper 1,What type of bond forms between a metal and a non-metal?,Covalent bond,Ionic bond,Metallic bond,Hydrogen bond,B,Ionic bonds form through electron transfer between metals and non-metals.
+O-Level,Chemistry,Reaction Rates,2018,Paper 1,Which factor does NOT generally increase reaction rate?,Increasing temperature,Adding a catalyst,Decreasing surface area,Increasing concentration,C,"Decreasing surface area reduces the frequency of collisions, slowing the reaction."
+O-Level,Chemistry,Organic Chemistry,2022,Paper 1,What is the general formula for alkanes?,CnH2n,CnH2n+2,CnH2n-2,CnHn,B,Alkanes are saturated hydrocarbons with the general formula CnH2n+2.
+O-Level,Physics,Mechanics,2020,Paper 1,What is the SI unit of force?,Joule,Newton,Watt,Pascal,B,"Force is measured in Newtons, defined as mass times acceleration."
+O-Level,Physics,Electricity,2019,Paper 1,What instrument is used to measure current?,Voltmeter,Ammeter,Barometer,Thermometer,B,An ammeter is connected in series to measure electric current.
+O-Level,Physics,Optics,2021,Paper 1,What type of lens is used to correct short-sightedness?,Convex lens,Concave lens,Cylindrical lens,Bifocal lens,B,A concave (diverging) lens spreads light rays to correct short-sightedness (myopia).
+O-Level,Physics,Waves,2018,Paper 1,What is the unit of frequency?,Metre,Hertz,Second,Newton,B,"Frequency is measured in Hertz (Hz), representing cycles per second."
+O-Level,Physics,Energy,2022,Paper 1,Which form of energy is stored in a stretched spring?,Kinetic energy,Elastic potential energy,Chemical energy,Thermal energy,B,A stretched or compressed spring stores elastic potential energy.
+O-Level,Computer Science,Number Systems,2020,Paper 1,What is the binary equivalent of decimal 9?,1001,1010,1100,1011,A,"9 in binary is 1001, since 8+1 = 9 (2^3 + 2^0)."
+O-Level,Computer Science,Programming Basics,2019,Paper 1,Which of these is a loop structure in programming?,if-else,for,switch,class,B,A 'for' loop repeats a block of code a set number of times.
+O-Level,Computer Science,Hardware,2021,Paper 1,Which device is used for permanent storage of data?,RAM,Cache,Hard disk,Register,C,"A hard disk provides non-volatile, permanent data storage."
+O-Level,Computer Science,Networking,2018,Paper 1,What does 'HTTP' stand for?,HyperText Transfer Protocol,High Transfer Text Protocol,HyperText Type Protocol,Host Transfer Text Protocol,A,"HTTP stands for HyperText Transfer Protocol, used for web communication."
+O-Level,Computer Science,Data Representation,2022,Paper 1,How many bits make up one byte?,4,8,16,2,B,A byte consists of 8 bits.

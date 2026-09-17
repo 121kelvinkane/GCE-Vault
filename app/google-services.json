@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "875535047808",
+    "project_id": "gce-vault-8fe02",
+    "storage_bucket": "gce-vault-8fe02.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:875535047808:android:0c851011b621bf16075a65",
+        "android_client_info": {
+          "package_name": "com.gcevault.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDbmxn6JVpXIntTUG7SI283qTD6BMooq98"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
