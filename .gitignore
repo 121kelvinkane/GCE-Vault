@@ -19,3 +19,4 @@ firebase-service-account.json
 serviceAccountKey.json
 *.json.json
 local.properties
+app/keystore/
