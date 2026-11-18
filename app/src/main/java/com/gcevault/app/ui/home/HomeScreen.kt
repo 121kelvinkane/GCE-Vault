@@ -29,9 +29,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gcevault.app.ui.notifications.NotificationsScreen
 import com.gcevault.app.viewmodel.UserViewModel
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.MobileAds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Duration
@@ -59,6 +64,12 @@ fun HomeScreen(
     val prefs = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
+    // Initialize Ads
+    DisposableEffect(Unit) {
+        MobileAds.initialize(context) {}
+        onDispose { }
+    }
 
     val currentUser by viewModel.currentUser.collectAsState()
     val userName = currentUser?.username ?: "Student"
@@ -99,8 +110,6 @@ fun HomeScreen(
                 NavigationDrawerItem(icon = { Icon(Icons.Default.DateRange, null) }, label = { Text("Personal Study Tracker", fontWeight = FontWeight.Medium) }, selected = false, onClick = { scope.launch { drawerState.close() }; onOpenSuccessRoadmap() })
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 Text("Settings", modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = PurplePrimary)
-                
-                // ✅ DARK MODE TOGGLE HAS BEEN REMOVED HERE
                 
                 NavigationDrawerItem(icon = { Icon(Icons.Default.Info, null) }, label = { Text("FAQ & Help", fontWeight = FontWeight.Medium) }, selected = false, onClick = { scope.launch { drawerState.close() }; showFaq = true })
                 NavigationDrawerItem(icon = { Icon(Icons.Default.Warning, null) }, label = { Text("Report a Problem", fontWeight = FontWeight.Medium) }, selected = false, onClick = { scope.launch { drawerState.close() }; showReport = true })
@@ -152,13 +161,12 @@ fun HomeScreen(
                     }
                 }
 
-                // ✅ WELCOME + ILLUSTRATION - Perfectly contained Row layout
+                // WELCOME + ILLUSTRATION
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Top
                 ) {
-                    // Left side: Welcome text (takes 60% of width)
                     Column(modifier = Modifier.weight(0.6f)) {
                         Text("Welcome back,", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = PurpleDeep)
                         Text("$userName!", fontSize = 24.sp, fontWeight = FontWeight.Black, color = PurplePrimary)
@@ -167,21 +175,15 @@ fun HomeScreen(
                         Spacer(Modifier.height(8.dp))
                         Box(modifier = Modifier.width(60.dp).height(3.dp).clip(CircleShape).background(PurplePrimary))
                     }
-                    
-                    // Right side: Illustration (takes 40% of width, perfectly contained)
                     StudyIllustration(
                         modifier = Modifier.weight(0.4f).height(110.dp)
                     )
                 }
 
                 Spacer(Modifier.height(16.dp))
-
-                // COUNTDOWN CARD
                 PurpleCountdownCard(modifier = Modifier.padding(horizontal = 20.dp))
-
                 Spacer(Modifier.height(16.dp))
 
-                // ✅ FEATURE CARDS (Daily 10 MCQ moved to the TOP!)
                 ModernFeatureCard(
                     title = "Daily 10 MCQ",
                     subtitle = "Test your knowledge",
@@ -223,6 +225,20 @@ fun HomeScreen(
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
 
+                // ✅ HOME PAGE BANNER AD
+                AndroidView(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    factory = { ctx ->
+                        AdView(ctx).apply {
+                            setAdSize(AdSize.BANNER)
+                            adUnitId = "ca-app-pub-6772916095273626/5485456429"
+                            loadAd(AdRequest.Builder().build())
+                        }
+                    }
+                )
+
                 Spacer(Modifier.height(20.dp))
             }
         }
@@ -236,14 +252,12 @@ fun HomeScreen(
     if (showAbout) { AlertDialog(onDismissRequest = { showAbout = false }, title = { Text("ℹ️ About Us", fontWeight = FontWeight.Bold) }, text = { Text("GCE Vault v1.0.0\n\nPass GCE. Not Luck.\n\nBuilt for students, by students.\n\n© 2024 GCE Vault") }, confirmButton = { TextButton(onClick = { showAbout = false }) { Text("Close", color = PurplePrimary, fontWeight = FontWeight.Bold) } }) }
 }
 
-// ✅ PERFECTLY CONTAINED ILLUSTRATION (No dangerous offsets)
 @Composable
 private fun StudyIllustration(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier,
         contentAlignment = Alignment.CenterEnd
     ) {
-        // Soft decorative background
         Box(
             modifier = Modifier
                 .size(90.dp)
@@ -313,7 +327,6 @@ fun PurpleCountdownCard(modifier: Modifier = Modifier) {
             .background(Brush.linearGradient(listOf(Color(0xFF8A35EF), Color(0xFF5220C0), Color(0xFF341A91))))
             .padding(horizontal = 18.dp, vertical = 18.dp)
     ) {
-        // Subtle decorative blob (kept safely inside bounds)
         Box(
             modifier = Modifier
                 .size(100.dp)
@@ -366,7 +379,6 @@ fun PurpleCountdownCard(modifier: Modifier = Modifier) {
             }
         }
 
-        // Watermark icon (safe offset)
         Icon(
             Icons.Default.School,
             "Graduation",

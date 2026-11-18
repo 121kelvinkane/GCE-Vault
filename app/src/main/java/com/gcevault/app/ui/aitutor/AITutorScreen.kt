@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.gcevault.app.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -32,15 +33,14 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
-// ✅ NEW PURPLE THEME COLORS
-val PurplePrimary = Color(0xFF7427E8)
-val PurpleDark = Color(0xFF32136F)
-val PurpleSoft = Color(0xFFF3F0FF)
-
 data class ChatMessage(
     val role: String,
     val content: String
 )
+
+val PurplePrimary = Color(0xFF7427E8)
+val PurpleDark = Color(0xFF32136F)
+val PurpleSoft = Color(0xFFF3F0FF)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,13 +54,12 @@ fun AITutorScreen(modifier: Modifier = Modifier) {
     val isA = savedLevel.contains("A-Level", ignoreCase = true)
     val isArts = savedStream.contains("Arts", ignoreCase = true) || savedStream.contains("Art", ignoreCase = true)
     val isScience = savedStream.contains("Science", ignoreCase = true) || savedStream.contains("Sci", ignoreCase = true)
-
     val systemPrompt = when {
-        isO && isArts -> "You are an expert GCE O-Level Arts tutor. Focus on clear essay structures, historical facts, geographical case studies, literature analysis, citizenship concepts, and economics principles. Keep answers concise, accurate, and encouraging."
-        isO && isScience -> "You are an expert GCE O-Level Science tutor. Focus on step-by-step mathematical calculations, scientific formulas, biology processes, chemistry equations, and physics laws. Always show your working clearly."
-        isA && isScience -> "You are an expert GCE A-Level Science tutor. Focus on advanced calculus, further mathematics, complex biology/chemistry/physics concepts, and computer science/ICT algorithms. Provide rigorous, step-by-step academic explanations."
-        isA && isArts -> "You are an expert GCE A-Level Arts tutor. Focus on advanced economic theories, deep historical analysis, advanced literature critique, formal essay writing, and French grammar. Provide high-level academic responses."
-        else -> "You are an expert GCE Tutor for O-Level and A-Level students. Answer questions clearly, provide step-by-step solutions, and be encouraging."
+        isO && isArts -> "You are an expert GCE O-Level Arts tutor. Focus on clear essay structures, historical facts, geographical case studies, literature analysis, citizenship concepts, and economics principles. Keep answers concise, accurate, and encouraging. IMPORTANT: Never use LaTeX, backslashes, or math symbols like \\( \\), \\frac, \\text. Use plain text only. Write 'x=2' not '\\(x=2\\)', write '2.3/22.99' not fractions."
+        isO && isScience -> "You are an expert GCE O-Level Science tutor. Focus on step-by-step mathematical calculations, scientific formulas, biology processes, chemistry equations, and physics laws. Always show your working clearly. IMPORTANT: Never use LaTeX, backslashes, or math symbols like \\( \\), \\frac, \\text, \\times. Use plain text only. Write 'H2O' not 'H₂O', write '2.3/22.99' not fractions, write 'x=2' not '\\(x=2\\)'."
+        isA && isScience -> "You are an expert GCE A-Level Science tutor. Focus on advanced calculus, further mathematics, complex biology/chemistry/physics concepts, and computer science/ICT algorithms. Provide rigorous, step-by-step academic explanations. IMPORTANT: Never use LaTeX, backslashes, or math symbols like \\( \\), \\frac, \\text, \\times. Use plain text only. Write 'x^2' for powers, write '2.3/22.99' not fractions, write 'x=2' not '\\(x=2\\)'."
+        isA && isArts -> "You are an expert GCE A-Level Arts tutor. Focus on advanced economic theories, deep historical analysis, advanced literature critique, formal essay writing, and French grammar. Provide high-level academic responses. IMPORTANT: Never use LaTeX or special formatting. Use plain text only."
+        else -> "You are an expert GCE Tutor for O-Level and A-Level students. Answer questions clearly, provide step-by-step solutions, and be encouraging. IMPORTANT: Never use LaTeX, backslashes, or math symbols like \\( \\), \\frac, \\text. Use plain text only. Write 'x=2' not '\\(x=2\\)', write '2.3/22.99' not fractions."
     }
 
     var messages by remember { mutableStateOf(listOf<ChatMessage>()) }
@@ -92,7 +91,6 @@ fun AITutorScreen(modifier: Modifier = Modifier) {
             modifier = modifier
                 .fillMaxSize()
                 .padding(padding)
-                // ✅ CRITICAL: Ensures the floating footer never blocks the input area
                 .padding(bottom = 100.dp) 
                 .background(Color(0xFFFBFAFF))
         ) {
@@ -268,21 +266,25 @@ fun cleanMarkdown(text: String): String {
         .trim()
 }
 
+// ✅ FIXED: Now sends the UPDATED message list (including the new user message)
 suspend fun sendMessage(
     userMessage: String, 
     systemPrompt: String,
     currentMessages: List<ChatMessage>,
     onResult: (List<ChatMessage>) -> Unit
 ) {
-    val groqApiKey = "YOUR_GROQ_API_KEY" // REPLACE WITH YOUR REAL KEY
+    val groqApiKey = BuildConfig.GROQ_API_KEY 
     
+    // 1. Create the updated list WITH the new user message
     val updatedMessages = currentMessages + ChatMessage("user", userMessage)
+    
+    // 2. Update UI immediately so the user sees their message
     onResult(updatedMessages)
 
     withContext(Dispatchers.IO) {
         try {
-            if (groqApiKey.contains("YOUR_GROQ_API_KEY")) {
-                throw Exception("API key not set! Please add your Groq API key in the code.")
+            if (groqApiKey.isBlank() || groqApiKey.contains("YOUR_REAL_GROQ_KEY_HERE")) {
+                throw Exception("API key not set! Please add your Groq API key to local.properties.")
             }
 
             val client = OkHttpClient.Builder()
@@ -298,8 +300,9 @@ suspend fun sendMessage(
                 put("content", systemPrompt)
             })
 
-            val history = currentMessages.takeLast(10)
-            for (msg in history) {
+            // 3. FIXED: Send the UPDATED messages (which includes the new user message)
+            val historyToSend = updatedMessages.takeLast(10)
+            for (msg in historyToSend) {
                 messagesArray.put(JSONObject().apply {
                     put("role", msg.role)
                     put("content", msg.content)
@@ -307,7 +310,8 @@ suspend fun sendMessage(
             }
 
             val jsonBody = JSONObject().apply {
-                put("model", "openai/gpt-oss-20b")
+                // ✅ CONFIRMED WORKING MODEL
+                put("model", "openai/gpt-oss-20b") 
                 put("messages", messagesArray)
                 put("temperature", 0.7)
                 put("max_tokens", 1024)

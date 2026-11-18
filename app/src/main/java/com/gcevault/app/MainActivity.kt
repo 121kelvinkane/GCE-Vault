@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -72,15 +73,36 @@ class MainActivity : ComponentActivity() {
             var showWelcome by remember { mutableStateOf(!prefs.getBoolean("has_seen_welcome", false)) }
             var showOnboarding by remember { mutableStateOf(!prefs.getBoolean("onboarding_complete", false)) }
             
-            var currentRoute by remember { mutableStateOf(BottomNavItem.Home.route) }
+            // ✅ 1. CREATE A NAVIGATION STACK (Remembers your history)
+            val navStack = remember { mutableStateListOf("home") }
+            val currentRoute = navStack.last()
+            
             var showDailyQuiz by remember { mutableStateOf(false) }
             var showStreakCalendar by remember { mutableStateOf(false) }
             var showSuccessRoadmap by remember { mutableStateOf(false) }
-
             var isLoggedIn by remember { mutableStateOf(true) } 
+
+            // ✅ 2. HELPER FUNCTIONS FOR NAVIGATION
+            val navigateTo = { route: String -> 
+                if (navStack.lastOrNull() != route) {
+                    navStack.add(route) 
+                }
+            }
+            
+            val goBack = { 
+                if (navStack.size > 1) {
+                    navStack.removeLast() // Goes to the actual previous page
+                }
+            }
 
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
+                    
+                    // ✅ 3. GLOBAL BACK HANDLER FOR OVERLAYS
+                    if (showDailyQuiz) BackHandler { showDailyQuiz = false }
+                    if (showStreakCalendar) BackHandler { showStreakCalendar = false }
+                    if (showSuccessRoadmap) BackHandler { showSuccessRoadmap = false }
+
                     when {
                         !isLoggedIn -> {
                             RegistrationScreen(onAuthSuccess = { isLoggedIn = true })
@@ -93,12 +115,13 @@ class MainActivity : ComponentActivity() {
                         else -> {
                             MainAppShell(
                                 currentRoute = currentRoute,
-                                onRouteChange = { currentRoute = it },
+                                navStack = navStack,
+                                navigateTo = navigateTo,
+                                goBack = goBack,
                                 onOpenDailyQuiz = { showDailyQuiz = true },
                                 onOpenStreakCalendar = { showStreakCalendar = true },
                                 onOpenSuccessRoadmap = { showSuccessRoadmap = true },
-                                // ✅ Changed to use the routing system for Progress
-                                onOpenProgress = { currentRoute = "Progress" } 
+                                onOpenProgress = { navigateTo("Progress") } 
                             )
                         }
                     }
@@ -110,8 +133,10 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainAppShell(
-    currentRoute: String, 
-    onRouteChange: (String) -> Unit, 
+    currentRoute: String,
+    navStack: MutableList<String>, // ✅ FIXED: Changed to MutableList<String>
+    navigateTo: (String) -> Unit,
+    goBack: () -> Unit,
     onOpenDailyQuiz: () -> Unit,
     onOpenStreakCalendar: () -> Unit, 
     onOpenSuccessRoadmap: () -> Unit, 
@@ -119,7 +144,11 @@ fun MainAppShell(
 ) {
     val AppBackgroundColor = Color(0xFFFBFAFF) 
     
-    // ✅ Hide bottom nav on full-screen pages like Progress
+    // ✅ 4. SYSTEM BACK BUTTON NOW USES goBack()
+    BackHandler(enabled = navStack.size > 1) {
+        goBack()
+    }
+    
     val showBottomNav = currentRoute != "Progress"
     
     Box(modifier = Modifier.fillMaxSize()) {
@@ -133,21 +162,19 @@ fun MainAppShell(
                     onOpenDailyQuiz = onOpenDailyQuiz,
                     onOpenStreakCalendar = onOpenStreakCalendar,
                     onOpenSuccessRoadmap = onOpenSuccessRoadmap,
-                    onOpenQBank = { onRouteChange("qbank") },
+                    onOpenQBank = { navigateTo("qbank") },
                     onOpenProgress = onOpenProgress,
-                    onNavigateToProfile = { onRouteChange("profile") }
+                    onNavigateToProfile = { navigateTo("profile") }
                 )
-                "qbank" -> QuestionBankScreen(onBack = { onRouteChange("home") })
+                // ✅ Pass goBack to screens so their in-app back buttons also work perfectly
+                "qbank" -> QuestionBankScreen(onBack = goBack)
                 "ai" -> AITutorScreen(modifier = Modifier.padding(padding).padding(bottom = 100.dp))
-                "chat" -> CommunityChatScreen(onBack = { onRouteChange("home") })
-                "profile" -> ProfileScreen(onNavigate = onRouteChange)
-                
-                // ✅ Added Progress Route: Back button goes to Profile
-                "Progress" -> ProgressScreen(onBack = { onRouteChange("profile") }) 
+                "chat" -> CommunityChatScreen(onBack = goBack)
+                "profile" -> ProfileScreen(onNavigate = navigateTo)
+                "Progress" -> ProgressScreen(onBack = goBack) 
             }
         }
         
-        // ✅ Only show bottom nav if not on a full-screen page
         if (showBottomNav) {
             Box(
                 modifier = Modifier
@@ -169,11 +196,11 @@ fun MainAppShell(
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    BottomNavItem(icon = Icons.Default.Home, label = "Home", selected = currentRoute == "home", onClick = { onRouteChange("home") }, modifier = Modifier.weight(1f))
-                    BottomNavItem(icon = Icons.AutoMirrored.Filled.List, label = "Q-Bank", selected = currentRoute == "qbank", onClick = { onRouteChange("qbank") }, modifier = Modifier.weight(1f))
-                    BottomNavItem(icon = Icons.Default.AutoAwesome, label = "AI Tutor", selected = currentRoute == "ai", onClick = { onRouteChange("ai") }, modifier = Modifier.weight(1f))
-                    BottomNavItem(icon = Icons.AutoMirrored.Filled.Chat, label = "Community", selected = currentRoute == "chat", onClick = { onRouteChange("chat") }, modifier = Modifier.weight(1f))
-                    BottomNavItem(icon = Icons.Default.Person, label = "Profile", selected = currentRoute == "profile", onClick = { onRouteChange("profile") }, modifier = Modifier.weight(1f))
+                    BottomNavItem(icon = Icons.Default.Home, label = "Home", selected = currentRoute == "home", onClick = { navigateTo("home") }, modifier = Modifier.weight(1f))
+                    BottomNavItem(icon = Icons.AutoMirrored.Filled.List, label = "Q-Bank", selected = currentRoute == "qbank", onClick = { navigateTo("qbank") }, modifier = Modifier.weight(1f))
+                    BottomNavItem(icon = Icons.Default.AutoAwesome, label = "AI Tutor", selected = currentRoute == "ai", onClick = { navigateTo("ai") }, modifier = Modifier.weight(1f))
+                    BottomNavItem(icon = Icons.AutoMirrored.Filled.Chat, label = "Community", selected = currentRoute == "chat", onClick = { navigateTo("chat") }, modifier = Modifier.weight(1f))
+                    BottomNavItem(icon = Icons.Default.Person, label = "Profile", selected = currentRoute == "profile", onClick = { navigateTo("profile") }, modifier = Modifier.weight(1f))
                 }
             }
         }

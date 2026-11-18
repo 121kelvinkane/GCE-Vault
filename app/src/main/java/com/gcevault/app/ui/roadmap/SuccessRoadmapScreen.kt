@@ -1,6 +1,7 @@
 package com.gcevault.app.ui.roadmap
 
 import android.content.Context
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,11 +27,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.FullScreenContentCallback
+import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.interstitial.InterstitialAd
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
+import com.google.android.gms.ads.rewarded.RewardedAd
+import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
-// ✅ NEW PURPLE THEME COLORS
+// ✅ PURPLE THEME COLORS
 private val PurplePrimary = Color(0xFF7427E8)
 private val PurpleDark = Color(0xFF32136F)
 private val PurpleSoft = Color(0xFFF3F0FF)
@@ -38,7 +49,6 @@ private val BackgroundColor = Color(0xFFFBFAFF)
 private val TextDark = Color(0xFF17134B)
 private val TextGray = Color(0xFF514D83)
 
-// FIXED RANGE: September 2026 to December 2027
 val FULL_ACTIVITIES_RANGE: List<YearMonth> = buildList {
     var current = YearMonth.of(2026, 9)
     val end = YearMonth.of(2027, 12)
@@ -54,6 +64,12 @@ fun SuccessRoadmapScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val prefs = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
     
+    // ✅ Initialize AdMob SDK
+    DisposableEffect(Unit) {
+        MobileAds.initialize(context) {}
+        onDispose { }
+    }
+
     var checkedDates by remember { 
         mutableStateOf(
             prefs.getStringSet("success_roadmap_dates", emptySet())?.toMutableSet() ?: mutableSetOf()
@@ -65,11 +81,30 @@ fun SuccessRoadmapScreen(onBack: () -> Unit) {
     val totalDaysStudied = checkedDates.size
     val today = LocalDate.now()
     
-    // ✅ NEW: Dialog state for confirmation
     var showConfirmDialog by remember { mutableStateOf(false) }
     var pendingDateToToggle by remember { mutableStateOf<LocalDate?>(null) }
-    
-    // Helper to handle the toggle logic
+
+    // ✅ AD STATES
+    var rewardedAd by remember { mutableStateOf<RewardedAd?>(null) }
+    var interstitialAd by remember { mutableStateOf<InterstitialAd?>(null) }
+
+    // Load Rewarded Ad
+    LaunchedEffect(Unit) {
+        RewardedAd.load(context, "ca-app-pub-6772916095273626/8111619765", AdRequest.Builder().build(), object : RewardedAdLoadCallback() {
+            override fun onAdLoaded(ad: RewardedAd) { rewardedAd = ad }
+            override fun onAdFailedToLoad(error: com.google.android.gms.ads.LoadAdError) { /* Fallback handled in click */ }
+        })
+    }
+
+    // Load Interstitial Ad
+    LaunchedEffect(Unit) {
+        InterstitialAd.load(context, "ca-app-pub-6772916095273626/2788894919", AdRequest.Builder().build(), object : InterstitialAdLoadCallback() {
+            override fun onAdLoaded(ad: InterstitialAd) { interstitialAd = ad }
+            override fun onAdFailedToLoad(error: com.google.android.gms.ads.LoadAdError) { /* Fallback handled in click */ }
+        })
+    }
+
+    // Helper to handle the toggle logic (called AFTER interstitial)
     val handleDateToggle = { date: LocalDate ->
         val dateString = date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
         val newCheckedDates = checkedDates.toMutableSet()
@@ -96,7 +131,6 @@ fun SuccessRoadmapScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                // ✅ PREMIUM PURPLE GRADIENT CARD
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -121,8 +155,33 @@ fun SuccessRoadmapScreen(onBack: () -> Unit) {
                         checkedDates = checkedDates,
                         today = today,
                         onDateClick = { date ->
-                            pendingDateToToggle = date
-                            showConfirmDialog = true
+                            // ✅ 1. INSTANT REWARDED AD ON CLICK
+                            val activity = context as? ComponentActivity
+                            if (activity != null) {
+                                val ad = rewardedAd
+                                if (ad != null) {
+                                    ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                                        override fun onAdDismissedFullScreenContent() {
+                                            // ✅ 2. SHOW DIALOG AFTER REWARDED AD
+                                            pendingDateToToggle = date
+                                            showConfirmDialog = true
+                                            // Reload for next time
+                                            RewardedAd.load(context, "ca-app-pub-6772916095273626/8111619765", AdRequest.Builder().build(), object : RewardedAdLoadCallback() {
+                                                override fun onAdLoaded(newAd: RewardedAd) { rewardedAd = newAd }
+                                            })
+                                        }
+                                        override fun onAdFailedToShowFullScreenContent(error: com.google.android.gms.ads.AdError) {
+                                            pendingDateToToggle = date
+                                            showConfirmDialog = true
+                                        }
+                                    }
+                                    ad.show(activity) { /* Reward earned */ }
+                                } else {
+                                    // Fallback if ad not loaded yet
+                                    pendingDateToToggle = date
+                                    showConfirmDialog = true
+                                }
+                            }
                         }
                     )
                 }
@@ -133,8 +192,30 @@ fun SuccessRoadmapScreen(onBack: () -> Unit) {
                         checkedDates = checkedDates,
                         today = today,
                         onDateClick = { date ->
-                            pendingDateToToggle = date
-                            showConfirmDialog = true
+                            // ✅ 1. INSTANT REWARDED AD ON CLICK
+                            val activity = context as? ComponentActivity
+                            if (activity != null) {
+                                val ad = rewardedAd
+                                if (ad != null) {
+                                    ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                                        override fun onAdDismissedFullScreenContent() {
+                                            pendingDateToToggle = date
+                                            showConfirmDialog = true
+                                            RewardedAd.load(context, "ca-app-pub-6772916095273626/8111619765", AdRequest.Builder().build(), object : RewardedAdLoadCallback() {
+                                                override fun onAdLoaded(newAd: RewardedAd) { rewardedAd = newAd }
+                                            })
+                                        }
+                                        override fun onAdFailedToShowFullScreenContent(error: com.google.android.gms.ads.AdError) {
+                                            pendingDateToToggle = date
+                                            showConfirmDialog = true
+                                        }
+                                    }
+                                    ad.show(activity) { /* Reward earned */ }
+                                } else {
+                                    pendingDateToToggle = date
+                                    showConfirmDialog = true
+                                }
+                            }
                         },
                         showNavigation = true,
                         onPreviousMonth = { currentMonth = currentMonth.minusMonths(1) },
@@ -171,10 +252,26 @@ fun SuccessRoadmapScreen(onBack: () -> Unit) {
                     Text(if (showFullYear) "Show Current Month" else "See Full Activities", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
+
+            // ✅ BANNER AD FOR TRACKER PAGE
+            item {
+                AndroidView(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    factory = { ctx ->
+                        AdView(ctx).apply {
+                            setAdSize(AdSize.BANNER)
+                            adUnitId = "ca-app-pub-6772916095273626/1737783102"
+                            loadAd(AdRequest.Builder().build())
+                        }
+                    }
+                )
+            }
         }
     }
 
-    // ✅ CONFIRMATION DIALOG
+    // ✅ CONFIRMATION DIALOG (Shows AFTER Rewarded Ad)
     if (showConfirmDialog && pendingDateToToggle != null) {
         AlertDialog(
             onDismissRequest = { 
@@ -188,9 +285,36 @@ fun SuccessRoadmapScreen(onBack: () -> Unit) {
             text = { Text("Are you sure you accomplished all your goals for today?") },
             confirmButton = {
                 TextButton(onClick = {
-                    pendingDateToToggle?.let { handleDateToggle(it) }
+                    val dateToSave = pendingDateToToggle
                     showConfirmDialog = false
                     pendingDateToToggle = null
+                    
+                    // ✅ 3. INTERSTITIAL AD ON "YES" CLICK
+                    val activity = context as? ComponentActivity
+                    if (activity != null) {
+                        val ad = interstitialAd
+                        if (ad != null) {
+                            ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                                override fun onAdDismissedFullScreenContent() {
+                                    // ✅ 4. SAVE DATE AFTER INTERSTITIAL CLOSES
+                                    dateToSave?.let { handleDateToggle(it) }
+                                    // Reload for next time
+                                    InterstitialAd.load(context, "ca-app-pub-6772916095273626/2788894919", AdRequest.Builder().build(), object : InterstitialAdLoadCallback() {
+                                        override fun onAdLoaded(newAd: InterstitialAd) { interstitialAd = newAd }
+                                    })
+                                }
+                                override fun onAdFailedToShowFullScreenContent(error: com.google.android.gms.ads.AdError) {
+                                    dateToSave?.let { handleDateToggle(it) }
+                                }
+                            }
+                            ad.show(activity)
+                        } else {
+                            // Fallback if ad not loaded yet
+                            dateToSave?.let { handleDateToggle(it) }
+                        }
+                    } else {
+                        dateToSave?.let { handleDateToggle(it) }
+                    }
                 }) {
                     Text("Yes", color = PurplePrimary, fontWeight = FontWeight.Bold)
                 }

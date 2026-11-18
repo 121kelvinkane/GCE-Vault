@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.gcevault.app.database.AppDatabase
 import com.gcevault.app.database.QuizResult
+import com.gcevault.app.database.QuizResultDao
 import com.gcevault.app.notifications.ReminderHelper
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow

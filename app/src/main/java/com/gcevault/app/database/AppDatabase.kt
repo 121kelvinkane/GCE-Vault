@@ -4,11 +4,18 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 
-@Database(entities = [User::class, QuizResult::class], version = 1, exportSchema = false)
+@Database(
+    entities = [User::class, QuizResult::class, QuestionEntity::class], 
+    version = 1, 
+    exportSchema = false
+)
+@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun quizResultDao(): QuizResultDao
+    abstract fun questionDao(): QuestionDao
 
     companion object {
         @Volatile
@@ -20,7 +27,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "gce_vault_database"
-                ).build()
+                )
+                .fallbackToDestructiveMigration()
+                .build()
                 INSTANCE = instance
                 instance
             }

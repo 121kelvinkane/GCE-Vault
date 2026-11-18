@@ -1,36 +1,89 @@
 package com.gcevault.app.ui.questionbank
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gcevault.app.data.local.AppDatabase
-import com.gcevault.app.data.local.entity.QuestionEntity
+import com.gcevault.app.data.repository.FireQuestion
+import com.gcevault.app.data.repository.QuestionRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
-class QuestionBankViewModel(application: Application) : AndroidViewModel(application) {
+class QuestionBankViewModel : ViewModel() {
 
-    private val dao = AppDatabase.getDatabase(application).questionDao()
+    private val repository = QuestionRepository()
 
-    private val _questions = MutableStateFlow<List<QuestionEntity>>(emptyList())
-    val questions: StateFlow<List<QuestionEntity>> = _questions
+    // All questions loaded from Firestore for the current subject
+    private val _allQuestions = MutableStateFlow<List<FireQuestion>>(emptyList())
+    val allQuestions: StateFlow<List<FireQuestion>> = _allQuestions.asStateFlow()
 
-    private val _subjects = MutableStateFlow<List<String>>(emptyList())
-    val subjects: StateFlow<List<String>> = _subjects
+    // Questions after applying the search filter
+    private val _filteredQuestions = MutableStateFlow<List<FireQuestion>>(emptyList())
+    val filteredQuestions: StateFlow<List<FireQuestion>> = _filteredQuestions.asStateFlow()
 
-    // Fetches questions for a specific subject and paper
-    fun loadQuestions(level: String, subject: String, paper: String) {
-        dao.getQuestionsBySubjectAndPaper(level, subject, paper)
-            .onEach { _questions.value = it }
-            .launchIn(viewModelScope)
+    // Current search text from the search bar
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    // Loading state to show a spinner while Firestore fetches
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    // Tracks which subject is currently loaded
+    private var currentSubject: String = ""
+
+    /**
+     * Called when the user selects a subject.
+     * Fetches all questions for that subject from Firestore.
+     */
+    fun loadQuestions(subject: String) {
+        if (subject == currentSubject && _allQuestions.value.isNotEmpty()) return
+
+        currentSubject = subject
+        _searchQuery.value = ""
+        _filteredQuestions.value = emptyList()
+
+        viewModelScope.launch {
+            _isLoading.value = true
+            val questions = repository.fetchQuestionsBySubject(subject)
+            _allQuestions.value = questions
+            _filteredQuestions.value = questions
+            _isLoading.value = false
+        }
     }
 
-    // Fetches all unique subjects for a given level (used for the Brain lists)
-    fun loadSubjects(level: String) {
-        dao.getAllSubjectsForLevel(level)
-            .onEach { _subjects.value = it }
-            .launchIn(viewModelScope)
+    /**
+     * Called every time the user types in the search bar.
+     * Filters the already-loaded questions locally for instant results.
+     */
+    fun onSearchQueryChanged(query: String) {
+        _searchQuery.value = query
+        applyFilter(query)
+    }
+
+    /**
+     * Clears the search and shows all questions again.
+     */
+    fun clearSearch() {
+        _searchQuery.value = ""
+        _filteredQuestions.value = _allQuestions.value
+    }
+
+    // Filters questions by topic, question text, year, and paper
+    private fun applyFilter(query: String) {
+        if (query.isBlank()) {
+            _filteredQuestions.value = _allQuestions.value
+            return
+        }
+
+        val lowerQuery = query.lowercase().trim()
+
+        _filteredQuestions.value = _allQuestions.value.filter { question ->
+            question.topics.any { it.lowercase().contains(lowerQuery) } ||
+            question.questionText.lowercase().contains(lowerQuery) ||
+            question.year.contains(lowerQuery) ||
+            question.paper.lowercase().contains(lowerQuery) ||
+            question.type.lowercase().contains(lowerQuery)
+        }
     }
 }

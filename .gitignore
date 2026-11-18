@@ -15,3 +15,7 @@
 local.properties
 serviceAccountKey.json
 serviceAccountKey.json
+firebase-service-account.json
+serviceAccountKey.json
+*.json.json
+local.properties
